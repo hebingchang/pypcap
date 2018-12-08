@@ -44,6 +44,10 @@ cdef extern from "pcap.h":
     struct pcap_pkthdr:
         bpf_timeval ts
         u_int caplen
+    struct pcap_rmtauth:
+        int 	type
+        char * 	username
+        char * 	password
     ctypedef struct pcap_t:
         int __xxx
     ctypedef struct pcap_if_t # hack for win32
@@ -81,6 +85,7 @@ cdef extern from "pcap.h":
     int     pcap_findalldevs(pcap_if_t **alldevsp, char *errbuf)
 
     # Only for WinPCAP
+    int     pcap_findalldevs_ex(char *source, pcap_rmtauth *auth, pcap_if_t **alldevs, char *errbuf)
     void    pcap_freealldevs(pcap_if_t *alldevs)
     int     pcap_lookupnet(char *device,
                            unsigned int *netp,
@@ -462,6 +467,30 @@ def findalldevs():
             break
         curr = curr.next
     pcap_freealldevs(devs)
+    return retval
+
+def findalldevs_ex():
+    """Return a list of capture devices."""
+    cdef pcap_if_t *alldevs
+    cdef pcap_if_t *d
+    cdef char ebuf[256]
+
+    status = pcap_findalldevs_ex("rpcap://", NULL, &alldevs, ebuf)
+    if status:
+        raise OSError(ebuf)
+    retval = []
+    if not alldevs:
+        return retval
+    curr = alldevs
+    while 1:
+        retval.append({
+            'name': str(curr.name.decode('UTF-8')),
+            'description': str(curr.description.decode('UTF-8'))
+        })
+        if not curr.next:
+            break
+        curr = curr.next
+    pcap_freealldevs(alldevs)
     return retval
 
 def lookupnet(char *dev):

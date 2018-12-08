@@ -7,6 +7,8 @@ import os
 import sys
 import urllib.request
 import zipfile
+from shutil import copyfile
+
 from Cython.Build import cythonize
 
 PACKAGE = "pypcap"
@@ -130,11 +132,7 @@ def get_extension():
         libraries = ['pcap']
         extra_compile_args = []
 
-    if os.name == 'nt':
-        cythonize('winpcap.pyx')
-        os.rename(os.path.dirname(os.path.abspath(__file__)) + '/winpcap.c', os.path.dirname(os.path.abspath(__file__)) + '/pcap.c')
-    else:
-        cythonize('pcap.pyx')
+    cythonize('pcap.pyx')
 
     return Extension(
         name='pcap',
@@ -148,19 +146,33 @@ def get_extension():
 
 
 if __name__ == '__main__':
-    os.remove(os.path.dirname(os.path.abspath(__file__)) + '/../npcap.zip')
-    os.remove(os.path.dirname(os.path.abspath(__file__)) + '/pcap.c')
+    try:
+        os.remove(os.path.dirname(os.path.abspath(__file__)) + '/npcap.zip')
+    except:
+        print('No NPcap SDK found.')
 
-    print('Downloading Npcap SDK...')
-    url = 'https://nmap.org/npcap/dist/npcap-sdk-1.01.zip'
-    response = urllib.request.urlopen(url)
-    data = response.read()
-    zip = open(os.path.dirname(os.path.abspath(__file__)) + '/../npcap.zip', 'wb')
-    zip.write(data)
-    zip.close()
-    print('Uncompressing Npcap SDK...')
-    with zipfile.ZipFile(os.path.dirname(os.path.abspath(__file__)) + '/npcap.zip', 'r') as zip_ref:
-        zip_ref.extractall(os.path.dirname(os.path.abspath(__file__)) + '/../wpdpack/')
+    try:
+        os.remove(os.path.dirname(os.path.abspath(__file__)) + '/pcap.pyx')
+    except:
+        print('No pcap.pyx found.')
+
+    if os.name == 'nt':
+        copyfile(os.path.dirname(os.path.abspath(__file__)) + '/winpcap.pyx',
+                 os.path.dirname(os.path.abspath(__file__)) + '/pcap.pyx')
+        print('Downloading Npcap SDK...')
+        url = 'https://nmap.org/npcap/dist/npcap-sdk-1.01.zip'
+        response = urllib.request.urlopen(url)
+        data = response.read()
+        zip = open(os.path.dirname(os.path.abspath(__file__)) + '/npcap.zip', 'wb')
+        zip.write(data)
+        zip.close()
+        print('Uncompressing Npcap SDK...')
+        with zipfile.ZipFile(os.path.dirname(os.path.abspath(__file__)) + '/npcap.zip', 'r') as zip_ref:
+            zip_ref.extractall(os.path.dirname(os.path.abspath(__file__)) + '/../wpdpack/')
+        os.remove(os.path.dirname(os.path.abspath(__file__)) + '/npcap.zip')
+    else:
+        copyfile(os.path.dirname(os.path.abspath(__file__)) + '/libpcap.pyx',
+                 os.path.dirname(os.path.abspath(__file__)) + '/pcap.pyx')
 
     setup(
         name=PACKAGE,

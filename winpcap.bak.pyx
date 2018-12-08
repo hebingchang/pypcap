@@ -4,6 +4,7 @@
 # $Id$
 
 """packet capture library
+
 This module provides a high level interface to packet capture systems.
 All packets on the network, even those destined for other hosts, are
 accessible through this mechanism.
@@ -43,6 +44,10 @@ cdef extern from "pcap.h":
     struct pcap_pkthdr:
         bpf_timeval ts
         u_int caplen
+    struct pcap_rmtauth:
+        int 	type
+        char * 	username
+        char * 	password
     ctypedef struct pcap_t:
         int __xxx
     ctypedef struct pcap_if_t # hack for win32
@@ -50,10 +55,6 @@ cdef extern from "pcap.h":
         pcap_if_t *next
         char *name
         char *description
-    ctypedef struct pcap_rmtauth:
-        int 	type
-        char * 	username
-        char * 	password
 
 ctypedef void (*pcap_handler)(u_char *arg, const pcap_pkthdr *hdr, const u_char *pkt)
 
@@ -82,9 +83,10 @@ cdef extern from "pcap.h":
     void    pcap_close(pcap_t *p)
     int     bpf_filter(bpf_insn *insns, const u_char *buf, u_int len, u_int caplen)
     int     pcap_findalldevs(pcap_if_t **alldevsp, char *errbuf)
-    void    pcap_freealldevs(pcap_if_t *alldevs)
-    int     pcap_findalldevs_ex(char *source, pcap_rmtauth *auth, pcap_if_t **alldevs, char *errbuf)
 
+    # Only for WinPCAP
+    int     pcap_findalldevs_ex(char *source, pcap_rmtauth *auth, pcap_if_t **alldevs, char *errbuf)
+    void    pcap_freealldevs(pcap_if_t *alldevs)
     int     pcap_lookupnet(char *device,
                            unsigned int *netp,
                            unsigned int *maskp,
@@ -184,7 +186,9 @@ cdef class bpf:
 
 cdef class pcap:
     """pcap(name=None, snaplen=65535, promisc=True, timeout_ms=None, immediate=False)  -> packet capture object
+
     Open a handle to a packet capture descriptor.
+
     Keyword arguments:
     name      -- name of a network interface or dumpfile to open,
                  or None to open the first available up interface
@@ -325,7 +329,9 @@ cdef class pcap:
     def dispatch(self, cnt, callback, *args):
         """Collect and process packets with a user callback,
         return the number of packets processed, or 0 for a savefile.
+
         Arguments:
+
         cnt      -- number of packets to process;
                     or 0 to process all packets until an error occurs,
                     EOF is reached, or the read times out;
@@ -347,7 +353,9 @@ cdef class pcap:
         """Processing packets with a user callback during a loop.
         The loop can be exited when cnt value is reached
         or with an exception, including KeyboardInterrupt.
+
         Arguments:
+
         cnt      -- number of packets to process;
                     0 or -1 to process all packets until an error occurs,
                     EOF is reached;
@@ -484,7 +492,6 @@ def findalldevs_ex():
         curr = curr.next
     pcap_freealldevs(alldevs)
     return retval
-
 
 def lookupnet(char *dev):
     """

@@ -5,10 +5,12 @@ from io import open
 import glob
 import os
 import sys
+import urllib.request
+import zipfile
+from Cython.Build import cythonize
 
 PACKAGE = "pypcap"
 VERSION = "1.2.2"
-
 
 def recursive_search_dirs(dirs, target_files):
     """Recursive search directories"""
@@ -128,6 +130,12 @@ def get_extension():
         libraries = ['pcap']
         extra_compile_args = []
 
+    if os.name == 'nt':
+        cythonize('winpcap.pyx')
+        os.rename(os.path.dirname(os.path.abspath(__file__)) + '/winpcap.c', os.path.dirname(os.path.abspath(__file__)) + '/pcap.c')
+    else:
+        cythonize('pcap.pyx')
+
     return Extension(
         name='pcap',
         sources=['pcap.c', 'pcap_ex.c'],
@@ -140,6 +148,20 @@ def get_extension():
 
 
 if __name__ == '__main__':
+    os.remove(os.path.dirname(os.path.abspath(__file__)) + '/../npcap.zip')
+    os.remove(os.path.dirname(os.path.abspath(__file__)) + '/pcap.c')
+
+    print('Downloading Npcap SDK...')
+    url = 'https://nmap.org/npcap/dist/npcap-sdk-1.01.zip'
+    response = urllib.request.urlopen(url)
+    data = response.read()
+    zip = open(os.path.dirname(os.path.abspath(__file__)) + '/../npcap.zip', 'wb')
+    zip.write(data)
+    zip.close()
+    print('Uncompressing Npcap SDK...')
+    with zipfile.ZipFile(os.path.dirname(os.path.abspath(__file__)) + '/npcap.zip', 'r') as zip_ref:
+        zip_ref.extractall(os.path.dirname(os.path.abspath(__file__)) + '/../wpdpack/')
+
     setup(
         name=PACKAGE,
         version=VERSION,
